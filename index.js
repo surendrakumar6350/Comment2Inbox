@@ -1,6 +1,7 @@
 import minimist from 'minimist';
 import { InstagramBot } from './bin/InstagramBot.js';
 import { EnvCache } from './bin/EnvCache.js';
+import logger from './bin/logger.js';
 
 const args = minimist(process.argv.slice(2));
 const bot = new InstagramBot();
@@ -14,8 +15,10 @@ if (args.useCachedEnv) {
         process.env.INSTAGRAM_PASSWORD = cachedEnv.INSTAGRAM_PASSWORD;
         process.env.INSTAGRAM_COOKIE = cachedEnv.INSTAGRAM_COOKIE;
         runUrl = args.url || cachedEnv.URL;
-        if (!runUrl) throw new Error('No URL provided and no cached URL found.');
-        console.log('Loaded cached environment variables and URL.');
+        if (!runUrl) {
+            throw new Error('No URL provided and no cached URL found.');
+        }
+        logger.info('Loaded cached environment variables and URL.');
     } else {
         throw new Error('No cached environment variables found.');
     }
@@ -40,9 +43,9 @@ if (args.useCachedEnv) {
             INSTAGRAM_COOKIE: process.env.INSTAGRAM_COOKIE,
             URL: runUrl
         });
-        console.info('Arguments cached. To use the cached arguments next time, run: node index.js --useCachedEnv');
+        logger.info('Arguments cached. To use the cached arguments next time, run: node index.js --useCachedEnv');
     }
-    await bot.monitorComments(runUrl, 10000);
+    await bot.monitorComments(runUrl, 30000);
 })();
 
 

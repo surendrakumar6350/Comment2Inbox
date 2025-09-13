@@ -4,6 +4,7 @@ import axios from 'axios';
 import { IgApiClient } from 'instagram-private-api';
 import puppeteer from 'puppeteer';
 import { CommentStorage } from './CommentStorage.js';
+import logger from './logger.js';
 
 const path = './bin/comments.json';
 
@@ -37,9 +38,9 @@ export class InstagramBot {
                 process.env.INSTAGRAM_PASSWORD
             );
             this.isLoggedIn = true;
-            console.log('Logged in successfully. [For DM functionality]');
+            logger.info('Logged in successfully. [For DM functionality]');
         } catch (err) {
-            console.error('Login failed:', err);
+            logger.error(`Login failed: ${err}`);
             throw err;
         }
     }
@@ -55,9 +56,9 @@ export class InstagramBot {
         try {
             const userId = await this.ig.user.getIdByUsername(username);
             await this.ig.entity.directThread([userId.toString()]).broadcastText(message);
-            console.log(`Message sent to ${username}`);
+            logger.info(`Message sent to ${username}`);
         } catch (err) {
-            console.error('Error sending DM:', err);
+            logger.error(`Error sending DM: ${err}`);
         }
     }
 
@@ -182,19 +183,22 @@ export class InstagramBot {
                 const newComments = this.commentStorage.getNewComments(latestComments, storedComments);
 
                 if (newComments.length > 0) {
-                    console.log(`New comments detected (${newComments.length}):`);
+                    logger.info(`New comments detected (${newComments.length}):`);
                     for (const c of newComments) {
-                        console.log(`- ${c.username}: ${c.text}`);
+                        logger.comment(`- ${c.username}: ${c.text}`);
                         await this.sendDM(c.username, `Hi ${c.username}, thanks for your comment: "${c.text}"`);
                     }
                     // Update stored comments
                     storedComments = [...storedComments, ...newComments];
                     this.commentStorage.save(storedComments);
                 } else {
-                    console.log('No new comments.');
+                    logger.warn('No new comments.');
+                    await new Promise(resolve => setTimeout(resolve, 16000)); // Wait so user can see the message
+                    process.stdout.write('\x1B[1A'); // Move up
+                    process.stdout.write('\x1B[2K'); // Clear line 
                 }
             } catch (err) {
-                console.error('Error fetching comments:', err.message);
+                logger.error(`Error fetching comments: ${err.message}`);
             }
 
             // Wait before next check
@@ -227,6 +231,7 @@ export class InstagramBot {
         const cookies = await page.cookies();
 
         await browser.close();
+        logger.info('Fetched new Instagram cookies');
         return cookies;
     }
 }
